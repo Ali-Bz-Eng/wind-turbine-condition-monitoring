@@ -66,7 +66,7 @@ def main() -> int:
         return 1
     try:
         poll(client, args.count)
-    except ModbusException as error:
+    except (ModbusException, OSError) as error:
         log.error("Connection lost: %s", error)
         return 1
     finally:
