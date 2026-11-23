@@ -3,28 +3,20 @@
 import argparse
 import asyncio
 import logging
+from dataclasses import asdict
 
 from pymodbus.constants import ExcCodes
 from pymodbus.server import StartAsyncTcpServer
 from pymodbus.simulator import DataType, SimData, SimDevice
 
 import config
-from simulator.turbine import Fault, TurbineReading, WindTurbine
+from register_map import INPUT_REGISTERS, encode
+from simulator.turbine import Fault, WindTurbine
 
 REGISTER_BLOCK_SIZE = 16
-REGISTER_MAX_VALUE = 0xFFFF
 DEFAULT_FAULT_START_S = 120
 
 log = logging.getLogger(__name__)
-
-
-def encode(reading: TurbineReading) -> list[int]:
-    """Scale each measurement to an unsigned 16-bit register value."""
-    values = []
-    for register in config.INPUT_REGISTERS:
-        scaled = round(getattr(reading, register.name) * register.scale)
-        values.append(min(max(scaled, 0), REGISTER_MAX_VALUE))
-    return values
 
 
 def unused_bit_table() -> list[SimData]:
@@ -41,7 +33,7 @@ class InputRegisterImage:
     """Latest encoded turbine values, served to clients on every read request."""
 
     def __init__(self) -> None:
-        self.values = [0] * len(config.INPUT_REGISTERS)
+        self.values = [0] * len(INPUT_REGISTERS)
 
     async def on_request(
         self,
@@ -55,7 +47,7 @@ class InputRegisterImage:
         """Copy the latest values into the registers pymodbus is about to return."""
         if function_code != config.INPUT_REGISTERS_FUNCTION_CODE:
             return None
-        for register, value in zip(config.INPUT_REGISTERS, self.values, strict=True):
+        for register, value in zip(INPUT_REGISTERS, self.values, strict=True):
             index = register.address - start_address
             if 0 <= index < len(current_registers):
                 current_registers[index] = value
@@ -66,7 +58,7 @@ async def run_turbine(turbine: WindTurbine, image: InputRegisterImage) -> None:
     """Advance the turbine every update period and refresh the register image."""
     while True:
         reading = turbine.step()
-        image.values = encode(reading)
+        image.values = encode(asdict(reading))
         log.info(
             "t=%4ds  rotor=%5.1f rpm  power=%6.0f kW  gearbox=%5.1f °C  "
             "vibration=%5.2f mm/s",

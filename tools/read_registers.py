@@ -8,30 +8,23 @@ from pymodbus.client import ModbusTcpClient
 from pymodbus.exceptions import ModbusException
 
 import config
+from register_map import INPUT_REGISTERS, decode
 
 DEFAULT_READ_COUNT = 10
 
 log = logging.getLogger(__name__)
 
 
-def decode(registers: list[int]) -> dict[str, float]:
-    """Convert raw register values back to engineering units."""
-    return {
-        register.name: value / register.scale
-        for register, value in zip(config.INPUT_REGISTERS, registers, strict=True)
-    }
-
-
 def format_values(values: dict[str, float]) -> str:
     return "  ".join(
         f"{register.name}={values[register.name]:.{register.decimals}f} {register.unit}"
-        for register in config.INPUT_REGISTERS
+        for register in INPUT_REGISTERS
     )
 
 
 def poll(client: ModbusTcpClient, read_count: int) -> None:
-    first_address = config.INPUT_REGISTERS[0].address
-    register_count = len(config.INPUT_REGISTERS)
+    first_address = INPUT_REGISTERS[0].address
+    register_count = len(INPUT_REGISTERS)
     for _ in range(read_count):
         response = client.read_input_registers(
             first_address, count=register_count, device_id=config.MODBUS_DEVICE_ID
