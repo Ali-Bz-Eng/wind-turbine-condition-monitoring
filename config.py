@@ -10,3 +10,4 @@ INPUT_REGISTERS_FUNCTION_CODE = 4
 UPDATE_PERIOD_S = 1.0
 
 DATABASE_PATH = Path("data") / "historian.db"
+MODEL_PATH = Path("models") / "isolation_forest.joblib"

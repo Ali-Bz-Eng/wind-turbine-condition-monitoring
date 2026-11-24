@@ -224,3 +224,6 @@ __marimo__/
 
 # Historian database
 data/
+
+# Trained models
+models/

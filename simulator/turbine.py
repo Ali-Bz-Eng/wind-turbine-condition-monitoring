@@ -2,7 +2,7 @@
 
 import math
 import random
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from enum import Enum
 
 
@@ -129,4 +129,18 @@ class WindTurbine:
             return 0.0
         ratio = min(1.0, wind_speed / cls.RATED_WIND_SPEED_M_S)
         return cls.RATED_ROTOR_SPEED_RPM * ratio
+
+
+
+def simulate(
+    duration_s: int,
+    fault: Fault = Fault.NONE,
+    fault_start_s: int = 0,
+    seed: int | None = None,
+) -> list[dict[str, float]]:
+    """Run the model offline and return the signal values for every second."""
+    turbine = WindTurbine(fault=fault, fault_start_s=fault_start_s, seed=seed)
+    return [asdict(turbine.step()) for _ in range(duration_s)]
+
+
     
