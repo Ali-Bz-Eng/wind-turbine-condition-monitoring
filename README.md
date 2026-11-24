@@ -10,11 +10,11 @@ The project compares a classic fixed-threshold alarm with an Isolation Forest an
 
 ```mermaid
 flowchart LR
-    T["Turbine simulator<br/>Modbus TCP server"] -- "input registers, polled every 1 s" --> H["Historian<br/>Modbus TCP client"]
-    H -- "UTC-timestamped rows" --> DB[("SQLite<br/>measurements + alarms")]
-    DB -- "new rows" --> M["Alarm monitor<br/>thresholds + anomaly model"]
-    M -- "raise / clear events" --> DB
-    DB -- "JSON API" --> D["Operator dashboard<br/>Flask + Chart.js"]
+    T[Turbine simulator] -->|Modbus TCP| H[Historian]
+    H -->|writes| DB[(SQLite)]
+    DB -->|new rows| M[Alarm monitor]
+    M -->|alarms| DB
+    DB -->|JSON API| D[Dashboard]
 ```
 
 | Component | Module | Role |
@@ -115,15 +115,15 @@ The test suite covers the turbine model, register encoding, the database, a poll
 ## Project structure
 
 ```
-├── simulator/      turbine model and Modbus TCP server
-├── historian/      Modbus polling client and SQLite storage
-├── analytics/      threshold rules, anomaly model, evaluation, live monitor
-├── dashboard/      Flask application, template, CSS and JavaScript
-├── tools/          manual Modbus read utility
-├── tests/          pytest suite
-├── docs/images/    dashboard screenshots
-├── config.py       connection and file settings
-└── register_map.py Modbus register map and value conversion
+├── simulator/        turbine model and Modbus TCP server
+├── historian/        Modbus polling client and SQLite storage
+├── analytics/        threshold rules, anomaly model, evaluation, live monitor
+├── dashboard/        Flask application, template, CSS and JavaScript
+├── tools/            manual Modbus read utility
+├── tests/            pytest suite
+├── docs/images/      dashboard screenshots
+├── config.py         connection and file settings
+└── register_map.py   Modbus register map and value conversion
 ```
 
 ## Limitations
