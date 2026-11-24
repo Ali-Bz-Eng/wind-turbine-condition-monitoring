@@ -10,7 +10,7 @@ The project compares a classic fixed-threshold alarm with an Isolation Forest an
 
 ```mermaid
 flowchart LR
-    T[Turbine simulator] -->|Modbus TCP| H[Historian]
+    T[Turbine] -->|Modbus TCP| H[Historian]
     H -->|writes| DB[(SQLite)]
     DB -->|new rows| M[Alarm monitor]
     M -->|alarms| DB
