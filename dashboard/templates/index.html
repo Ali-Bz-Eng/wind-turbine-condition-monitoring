@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WT-01 Condition Monitoring</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+  <script src="{{ url_for('static', filename='vendor/chart.umd.min.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='dashboard.js') }}" defer></script>
+</head>
+<body>
+  <header class="header">
+    <div>
+      <h1>WT-01 Condition Monitoring</h1>
+      <p class="subtitle">Simulated 2 MW wind turbine</p>
+    </div>
+    <div class="status">
+      <span id="data-status" class="status-badge">Connecting</span>
+      <span class="status-item">Last update <strong id="last-update">--:--:--</strong></span>
+      <span class="status-item">Active alarms <strong id="active-alarm-count">0</strong></span>
+    </div>
+  </header>
+
+  <main>
+    <section class="values" aria-label="Live values">
+      {% for signal in signals %}
+      <div class="value-tile" id="tile-{{ signal.name }}">
+        <span class="value-label">{{ signal.label }}</span>
+        <span class="value-reading">
+          <span class="value-number" id="value-{{ signal.name }}">--</span>
+          <span class="value-unit">{{ signal.unit }}</span>
+        </span>
+        <span class="value-limit">
+          {% if signal.alarm_limit is not none %}Alarm limit {{ '%g' % signal.alarm_limit }} {{ signal.unit }}{% else %}No alarm limit{% endif %}
+        </span>
+      </div>
+      {% endfor %}
+    </section>
+
+    <section class="panel" aria-label="Trends">
+      <h2>Trends, last 10 minutes</h2>
+      <div class="trends">
+        {% for signal in signals %}
+        <figure class="trend">
+          <figcaption>{{ signal.label }} ({{ signal.unit }})</figcaption>
+          <div class="trend-canvas"><canvas id="chart-{{ signal.name }}"></canvas></div>
+        </figure>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="panel" aria-label="Alarm journal">
+      <h2>Alarm journal</h2>
+      <table class="alarms">
+        <thead>
+          <tr><th>State</th><th>Raised</th><th>Cleared</th><th>Source</th><th>Message</th></tr>
+        </thead>
+        <tbody id="alarm-rows">
+          <tr class="alarm-empty"><td colspan="5">No alarms recorded</td></tr>
+        </tbody>
+      </table>
+    </section>
+  </main>
+
+  <script id="signal-settings" type="application/json">{{ signals | tojson }}</script>
+</body>
+</html>

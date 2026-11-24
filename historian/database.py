@@ -61,6 +61,15 @@ def fetch_latest(connection: sqlite3.Connection, count: int) -> list[dict]:
     return [dict(row) for row in reversed(rows)]
 
 
+def fetch_since(connection: sqlite3.Connection, timestamp: str) -> list[dict]:
+    """Return measurements from a timestamp onwards, oldest first."""
+    rows = connection.execute(
+        f"SELECT * FROM {TABLE_NAME} WHERE timestamp >= ? ORDER BY timestamp",
+        (timestamp,),
+    ).fetchall()
+    return [dict(row) for row in rows]
+
+
 def fetch_after(
     connection: sqlite3.Connection, timestamp: str | None, limit: int
 ) -> list[dict]:
