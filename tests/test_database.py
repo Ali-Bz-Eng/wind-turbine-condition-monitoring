@@ -6,10 +6,14 @@ from pathlib import Path
 import pytest
 
 from historian.database import (
+    clear_open_alarms,
     connect,
+    fetch_after,
+    fetch_alarms,
     fetch_latest,
     format_timestamp,
     insert_measurement,
+    raise_alarm,
 )
 
 START = datetime(2026, 11, 23, 21, 30, 0, tzinfo=UTC)
@@ -66,3 +70,22 @@ def test_data_persists_after_reconnect(database_path: Path) -> None:
     rows = fetch_latest(reopened, 10)
     reopened.close()
     assert len(rows) == 1
+
+
+def test_fetch_after_returns_only_newer_rows(database_path: Path) -> None:
+    connection = connect(database_path)
+    for second in range(5):
+        insert_measurement(connection, START + timedelta(seconds=second), SAMPLE)
+    rows = fetch_after(connection, "2026-11-23T21:30:02.000Z", limit=10)
+    connection.close()
+    assert [row["timestamp"][17:19] for row in rows] == ["03", "04"]
+
+
+def test_open_alarms_are_closed_on_restart(database_path: Path) -> None:
+    connection = connect(database_path)
+    raise_alarm(connection, "2026-11-23T21:30:00.000Z", "threshold", "Test alarm")
+    closed = clear_open_alarms(connection, "2026-11-23T21:31:00.000Z")
+    [alarm] = fetch_alarms(connection, 10)
+    connection.close()
+    assert closed == 1
+    assert alarm["cleared_at"] == "2026-11-23T21:31:00.000Z"

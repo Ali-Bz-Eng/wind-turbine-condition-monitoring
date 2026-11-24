@@ -8,6 +8,7 @@ from pathlib import Path
 from register_map import SIGNAL_NAMES
 
 TABLE_NAME = "measurements"
+ALARM_TABLE_NAME = "alarms"
 
 
 def format_timestamp(moment: datetime) -> str:
@@ -27,6 +28,14 @@ def connect(path: Path) -> sqlite3.Connection:
     connection.execute(
         f"CREATE TABLE IF NOT EXISTS {TABLE_NAME} "
         f"(timestamp TEXT PRIMARY KEY, {columns})"
+    )
+    connection.execute(
+        f"CREATE TABLE IF NOT EXISTS {ALARM_TABLE_NAME} ("
+        "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+        "raised_at TEXT NOT NULL, "
+        "cleared_at TEXT, "
+        "source TEXT NOT NULL, "
+        "message TEXT NOT NULL)"
     )
     return connection
 
@@ -50,3 +59,60 @@ def fetch_latest(connection: sqlite3.Connection, count: int) -> list[dict]:
         f"SELECT * FROM {TABLE_NAME} ORDER BY timestamp DESC LIMIT ?", (count,)
     ).fetchall()
     return [dict(row) for row in reversed(rows)]
+
+
+def fetch_after(
+    connection: sqlite3.Connection, timestamp: str | None, limit: int
+) -> list[dict]:
+    """Return measurements newer than a timestamp, oldest first.
+
+    Without a timestamp, only the latest measurement is returned, so a new
+    reader starts from the present instead of replaying the whole history.
+    """
+    if timestamp is None:
+        return fetch_latest(connection, 1)
+    rows = connection.execute(
+        f"SELECT * FROM {TABLE_NAME} WHERE timestamp > ? ORDER BY timestamp LIMIT ?",
+        (timestamp, limit),
+    ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def raise_alarm(
+    connection: sqlite3.Connection, timestamp: str, source: str, message: str
+) -> int:
+    """Record a new active alarm and return its identifier."""
+    with connection:
+        cursor = connection.execute(
+            f"INSERT INTO {ALARM_TABLE_NAME} (raised_at, source, message) "
+            "VALUES (?, ?, ?)",
+            (timestamp, source, message),
+        )
+    return cursor.lastrowid
+
+
+def clear_alarm(connection: sqlite3.Connection, alarm_id: int, timestamp: str) -> None:
+    """Mark an active alarm as cleared."""
+    with connection:
+        connection.execute(
+            f"UPDATE {ALARM_TABLE_NAME} SET cleared_at = ? WHERE id = ?",
+            (timestamp, alarm_id),
+        )
+
+
+def clear_open_alarms(connection: sqlite3.Connection, timestamp: str) -> int:
+    """Close alarms left active by a previous run and return how many."""
+    with connection:
+        cursor = connection.execute(
+            f"UPDATE {ALARM_TABLE_NAME} SET cleared_at = ? WHERE cleared_at IS NULL",
+            (timestamp,),
+        )
+    return cursor.rowcount
+
+
+def fetch_alarms(connection: sqlite3.Connection, count: int) -> list[dict]:
+    """Return the most recent alarms, newest first."""
+    rows = connection.execute(
+        f"SELECT * FROM {ALARM_TABLE_NAME} ORDER BY id DESC LIMIT ?", (count,)
+    ).fetchall()
+    return [dict(row) for row in rows]
